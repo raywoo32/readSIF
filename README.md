@@ -1,10 +1,11 @@
 # readSIF
 
 A simple Node JS to load an exisiting database with a .sif file.
-Database definition can be seen 
-[here] (https://github.com/VinLau/BAR-interactions-database) and in test_dump.sql
-.sif definition can be seen in sifDefinition.sif 
-If one operations fails with a rejected promise, no updates from the .sif will be uploaded to the database. 
+* Database definition can be seen 
+[here](https://github.com/VinLau/BAR-interactions-database) and in test_dump.sql
+* .sif definition can be seen in sifDefinition.sif 
+
+Note:: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded 
 
 ## Getting Started
 
