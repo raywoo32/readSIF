@@ -21,7 +21,7 @@ For uploading a GRN
 node readSIF.js <YOURSIF.sif>
 ```
 
-For uploaded not a GRN
+For uploading not a GRN
 ```
 node readSIF.js <YOURSIF.sif> -n
 ```
