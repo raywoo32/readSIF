@@ -2,7 +2,7 @@
 
 A simple Node JS to load an exisiting database with a .sif file.
 * Database definition can be seen 
-[here](https://github.com/VinLau/BAR-interactions-database) and in test_dump.sql
+[here](https://github.com/VinLau/BAR-interactions-database) and in schema.sql
 * .sif definition can be seen in sifDefinition.sif 
 
 Note: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded 
@@ -50,10 +50,10 @@ Post Test cleanup:
 
 ## Acknowledgments
 
-* Based on Vincent Lau's [insertIntoTables.js] (https://github.com/VinLau/BAR-interactions-database)and in test_dump.sql)
+* Based on Vincent Lau's [insertIntoTables.js](https://github.com/VinLau/BAR-interactions-database)
 * See Citations and Resources 
 
-## Citations 
+## Citations and Resources
 
 * Testing 
 [jest tutorial 1](http://zetcode.com/javascript/jest/),
