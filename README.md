@@ -28,11 +28,11 @@ node readSIF.js <YOURSIF.sif> -n
 
 ### Prerequisites
 
-jest, fs, knex, mysql, shelljs
-
-```
-npm jest -g
-```
+1. jest
+2. fs
+3. knex
+4. mysql
+5. shelljs (only needed for test suite) 
 
 ## Running the tests
 
@@ -42,7 +42,7 @@ npm jest -g
 
 Post Test cleanup:
 1. Execute ./makeDB/schema.sql to clear db OR
-2. Execute test_dump.sql to reset for testing 
+2. Execute ./test/test_dump.sql to reset for testing 
 
 ## Versioning
 
@@ -50,7 +50,7 @@ Post Test cleanup:
 
 ## Acknowledgments
 
-* Addition to Vincent Lau's [BAR-interactions-database](https://github.com/VinLau/BAR-interactions-database)
+* Aside to Vincent Lau's [BAR-interactions-database](https://github.com/VinLau/BAR-interactions-database)
 * See Citations and Resources 
 
 ## Citations and Resources
