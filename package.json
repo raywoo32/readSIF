@@ -1,0 +1,17 @@
+{
+  "name": "readsif",
+  "version": "1.0.0",
+  "description": "",
+  "main": "insertSIF.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^24.8.0"
+  },
+  "dependencies": {
+    "shelljs": "^0.8.3"
+  }
+}

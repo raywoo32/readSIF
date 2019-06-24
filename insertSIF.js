@@ -1,29 +1,18 @@
 /* readSIF.js
 USAGE: 
-node insert.js mySIF.sif 
+  node insert.js mySIF.sif 
+  node insert.js myNOTGRN.sif -n
 PRECONDITION: 
 1. options var correct 
 2. knex reffers to db with interactions-vincent
 3. interactions-vincent has interaction_lookup_table loaded
-TODO: 
-add flags so can get display information from header???
 */
 
-// PART I. Imports and Load Knex
+// PART 1: Imports and Load Knex
 var fs = require('fs');
-const options = { 
-    client: 'mysql2',
-    connection: {
-        host: '127.0.0.1',
-        user: 'rwoo',
-        password: '123Password',
-        database: 'interactions_vincent'
-    }
-}
-const knex = require('knex')(options);
+const knex = require('./dbConfig.js');
 
-// PART 1.1 READ AND GLOBAL VARS 
-// Global Variables! TODO: Change, bad style. 
+// PART 1.1: READ AND GLOBAL VARS 
 const arg = process.argv.slice(2);
 var sif = fs.readFileSync(arg[0].toString()); 
 var sifByLine = sif.toString().split("\n");
@@ -36,22 +25,8 @@ if ( typeof flag != 'undefined') { // any third argument can mean is not grn
 const totalLine = sifByLine.length - 1; //minus 1 to be last indexable line 
 var currLine = 5; //end of header 
 
-//PART 1.2 EXPORT FUNCTIONS FOR TESTING 
-module.exports = { getItrnIdx };
 
-/* TODO determine what to do about GET author name, title, journal, 
-// MAKE FUNCTION TO GET TITLE, NAME AND JOURNAL?, would need to implement options with flags
-eg. node insert.js mySIF.sif -SOMEFLAG
-function getDisplay() {
-  const citation = sifByLine[5].replace('#', '').trim().split(",");
-  const title = citation[0].trim();
-  const authors = citation[1].trim();
-  const journal = citation[2].trim(); 
-  const tags = sifByLine[2].replace('#', '').trim(); // comma separated 
-  return ([title, authors, journal, tags])
-}
-*/
-
+// PART 2: HELPER FUNCTIONS
 /* readHeader()
 Helper function called by inserts that reads the header. 
 TODO: modify based on sif format. Currently format as seen in example.sif 
@@ -66,6 +41,7 @@ function readHeader() {
     return([sourceName, tags, grnTitle, comments])
     //      0            1      2      3            
 }
+
 
 /* parseInteractionType()
 Assigns global variables interactionTypeId and modeOfAction from string if of a valid format.
@@ -116,9 +92,6 @@ function nextInteraction() {
   }
 }
 
-/* 
-Helper function to convert text to interaction_type_id foreign key
-*/
 function getItrnIdx (AIVIndex) {
   return {
   'ppi' : 1,
@@ -127,9 +100,6 @@ function getItrnIdx (AIVIndex) {
   }[AIVIndex]
 }
 
-/* n
-Helper function to convert mode of action text into foreign key for modes_of_action_lookup_table
-*/
 function getModeOfAction (moa) {
   return {
   'a' : 2,
@@ -138,11 +108,10 @@ function getModeOfAction (moa) {
   }[moa]
 }
 
-/* insert()
-Uses helper functions above to insert into external_source, interaction, and interactions_source_mi_join_table
-*/
-async function insert() {
 
+
+// PART 3: SCRIPT EXECUTION 
+knex.transaction(async function(trx) {
   // insert into external_source 
   var header = readHeader()
   var sourceId; //so can be used outside of .then()
@@ -153,7 +122,7 @@ async function insert() {
       console.log('INSERT initialization external_source');
       if (external_source.length === 0 ){
         console.log(`PMID not found {$sourceName}}, INSERTing into external_source`);
-        var insertSource = knex('external_source').insert({
+        var insertSource = trx('external_source').insert({
           source_name : header[0],
           comments : header[3],
           date_uploaded : new Date(),
@@ -189,7 +158,7 @@ async function insert() {
       console.log(`INSERT interactions ${currLine}`);
       if (rows.length === 0 ){
         console.log(`Interaction ${interaction[0]} ${interaction[2]} ${interaction[1]} NOT FOUND, INSERTing - line ${currLine}`);
-        var inserted =  knex('interactions').insert({
+        var inserted =  trx('interactions').insert({
           entity_1 : interaction[0],
           entity_2 : interaction[1],
           interaction_type_id : getItrnIdx(interaction[2]),
@@ -204,7 +173,6 @@ async function insert() {
     })
       //Insert into Mi table 
     .then(async(interactionReturn)=>{
-      console.log("Check THIS EXECUTES");
       const joinTablePreSelect = await knex('interactions_source_mi_join_table').where({
         interaction_id : interactionReturn[0].interaction_id || interactionReturn,
         source_id : sourceId,
@@ -215,62 +183,28 @@ async function insert() {
       console.log(`INSERT initialization interactions_source_mi_join_table ${currLine}`);
       if (joinTablePreSelect.length === 0 ) {
         console.log(`Interactions-Source Mi not in database: INSERTing - line ${currLine}`);
-        return knex('interactions_source_mi_join_table').insert({
+        return trx('interactions_source_mi_join_table').insert({
           interaction_id : interactionReturn[0].interaction_id || interactionReturn,
           source_id : sourceId,
           external_db_id : "",
           mi_detection_method : interaction[4],
           mi_detection_type : interaction[5],
-          mode_of_action : getModeOfAction(interaction[3]) //Just put 1 because it wasn't accepting blank
+          mode_of_action : getModeOfAction(interaction[3]) 
         });
       }
       else {
         console.log(`Interactions-Source Mi in database: NOT INSERTing - line ${currLine}`, joinTablePreSelect);
-        //return interactionReturn;
       }
     })
-    .catch((err)=>{
-      console.error('Error:', err);
-      throw new Error('STOP!');
-    })    
   }
-  console.log("FINISHED")
-}
+})
+.then(function(inserts) {
+  console.log("Sif file uploaded to database");
+})
+.catch(function(error) {
+  console.log("Sif file NOT uploaded to database");
+  console.error(error);
+})
 
-/* QUESTIONS
-1. MI INSERT 
-  mode_of_action : 1 //Just put 1 because it wasn't accepting blank or default 
-2. WHERE MI TYPE, DECTECTIONS
-3. WHAT |401|432 ETC. 
-*/
-
-/*CONTROLLER EXECUTION */
-insert()
+/* CLEAN UP */
 .finally(() => {knex.destroy();})
-
-
-
-// INITIAL TESTING 
-// READ HEADER TEST 1
-//=console.log(readHeader())
-/*[ '21245844', 
-'Y1H|Y2H|Root Stele|qPCR|ChIP|OBP2|REV',
-'Brady et al.(MOL SYST BIOL, 2011) Root Stele Network',
-'Root stele gene network initially mapped with Y1H and Y2H on highly-enriched TFs (based on root spatiotemporal map) and miRNA-of-interest promoters. In planta confirmation and regulation determnined via
-ChIP and qPCR. - Vincent' ]
-*/
-
-// NEXT INTERACTION TEST 
-//
-//console.log(nextInteraction(currLine)) //[ 'AT2G44940', 'AT5G60200', 'pdi', null ]
-
-// getItrnIdx (AIVIndex) 
-//console.log("GET INDEX", getItrnIdx("ppi"), getItrnIdx("pdi")) //GET INDEX 1 2
-
-/* CITATIONS
-https://github.com/VinLau/BAR-interactions-database
-http://zetcode.com/javascript/jest/
-https://stackoverflow.com/questions/18724378/check-if-a-line-only-contain-whitespace-and-n-in-js-node-js
-https://stackoverflow.com/questions/41080543/how-to-use-knex-with-async-await
-https://github.com/sheerun/knex-migrate //migrate
-*/
