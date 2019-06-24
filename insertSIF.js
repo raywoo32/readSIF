@@ -6,8 +6,7 @@ PRECONDITION:
 2. knex reffers to db with interactions-vincent
 3. interactions-vincent has interaction_lookup_table loaded
 TODO: 
-combine insert functions 
-add flags so can get display information from header 
+add flags so can get display information from header???
 */
 
 // PART I. Imports and Load Knex
@@ -26,10 +25,16 @@ const knex = require('knex')(options);
 // PART 1.1 READ AND GLOBAL VARS 
 // Global Variables! TODO: Change, bad style. 
 const arg = process.argv.slice(2);
-var sif = fs.readFileSync(arg.toString()); 
+var sif = fs.readFileSync(arg[0].toString()); 
 var sifByLine = sif.toString().split("\n");
+//flags
+var flag = arg[1];
+var isGRN = true;
+if ( typeof flag != 'undefined') { // any third argument can mean is not grn
+  isGRN = false;
+}
 const totalLine = sifByLine.length - 1; //minus 1 to be last indexable line 
-var currLine = 6; //end of header 
+var currLine = 5; //end of header 
 
 //PART 1.2 EXPORT FUNCTIONS FOR TESTING 
 module.exports = { getItrnIdx };
@@ -53,15 +58,11 @@ TODO: modify based on sif format. Currently format as seen in example.sif
 @return array, See final line of function (has indexes for easy reading)
 */
 function readHeader() {
-    //Clean up take information 
-    //TODO: CHANGE WHEN SIF FORMAT KNOWN 
-    const sourceName = sifByLine[0].replace('#', '').trim(); //sourceName is PMID, 
-    const isGRN = sifByLine[1].replace('#', '').trim(); // throw error is not 1 or 0
-    const tags = sifByLine[2].replace('#', '').trim();; // comma separated 
-    const comments = sifByLine[4].replace('#', '').trim(); //any type in one line 
-    const citation = sifByLine[5].replace('#', '').trim().split(",");
-    const title = citation[0].trim();
-    const grnTitle = isGRN + "," + title;
+    const sourceName = sifByLine[1].replace('#source_name:', '').trim(); 
+    var grnTitle = sifByLine[0].replace('#grn_title:', '').trim(); 
+    const tags = sifByLine[3].replace('#tags:', '').trim();
+    const comments = sifByLine[2].replace('#comments:', '').trim(); //any type in one line 
+    if (isGRN == false) { grnTitle = null; }
     return([sourceName, tags, grnTitle, comments])
     //      0            1      2      3            
 }
@@ -101,19 +102,21 @@ function nextInteraction() {
     } 
     else {
         interaction = interaction.trim();
-        interactionElements = interaction.split(" ");  //Split by any whitespace 
-        var entity1 = interactionElements[0]; //mod global var
-        var entity2 = interactionElements[2]; //mod global var
+        interactionElements = interaction.split(" ");  
+        var entity1 = interactionElements[0].toUpperCase(); //force upper 
+        var entity2 = interactionElements[2].toUpperCase().split("|")[0]; 
         var elements = parseInteractionType(interactionElements[1]);
         var interactionTypeId = elements[0];
         var modeOfAction = elements[1];
-        return ([entity1, entity2, interactionTypeId, modeOfAction]);
-        //        0         1       2                   3
+        var miDetectionMethod = interactionElements[2].toUpperCase().split("|")[1];
+        var miDetectionType =interactionElements[2].toUpperCase().split("|")[2];
+        return ([entity1, entity2, interactionTypeId, modeOfAction, miDetectionMethod, miDetectionType]);
+        //        0         1       2                   3             4                 5
     }
   }
 }
 
-/* nextInteraction
+/* 
 Helper function to convert text to interaction_type_id foreign key
 */
 function getItrnIdx (AIVIndex) {
@@ -124,14 +127,21 @@ function getItrnIdx (AIVIndex) {
   }[AIVIndex]
 }
 
+/* n
+Helper function to convert mode of action text into foreign key for modes_of_action_lookup_table
+*/
+function getModeOfAction (moa) {
+  return {
+  'a' : 2,
+  'r' : 3,
+  null : 1
+  }[moa]
+}
+
 /* insert()
 Uses helper functions above to insert into external_source, interaction, and interactions_source_mi_join_table
 */
 async function insert() {
-  //Get mi from Header 
-  const mi = sifByLine[3].replace('#', '').trim().split(",");
-  const miDetectionMethod = mi[0].trim(); //throw error if not 2 items comma separated
-  const miDetectionType = mi[1].trim();
 
   // insert into external_source 
   var header = readHeader()
@@ -140,12 +150,10 @@ async function insert() {
     source_name : header[0]
   })
     .then(  (external_source)=>{
-      sourceId = external_source[0].source_id
-      console.log('INSERT initialization external_source', external_source);
+      console.log('INSERT initialization external_source');
       if (external_source.length === 0 ){
         console.log(`PMID not found {$sourceName}}, INSERTing into external_source`);
-        return knex('external_source').insert({
-          //source_id : 1, //TODO
+        var insertSource = knex('external_source').insert({
           source_name : header[0],
           comments : header[3],
           date_uploaded : new Date(),
@@ -154,9 +162,16 @@ async function insert() {
           tags : header[1],
           image_url : null
         })
+        .then(  (insertedSource)=>{
+          console.log(insertedSource)
+          console.log(insertedSource[0]);
+          sourceId = insertedSource[0];
+          return insertedSource;
+        })
       }
       else {
-        console.log(`Paper in Database: ${header[0]}, not inserting`);
+        console.log(`Paper with PMID:${header[0]} in Database: not inserting`, external_source);
+        sourceId = external_source[0].source_id
         return external_source;
       }
   })
@@ -164,71 +179,90 @@ async function insert() {
   //Start Looping throught Insertion into Interaction and Mi
   while (currLine <= totalLine) {
   var interaction = nextInteraction();
+  currLine = currLine + 1 
   await knex('interactions').select('*').where({
     entity_1 : interaction[0],
     entity_2 : interaction[1],
-    interaction_type_id : getItrnIdx(interaction[2]), 
+    interaction_type_id : getItrnIdx(interaction[2])
   })
     .then(  (rows)=>{
-      console.log('INSERT initialization interaction and mi', rows);
+      console.log(`INSERT interactions ${currLine}`);
       if (rows.length === 0 ){
-        console.log(`Interaction NOT FOUND ${interaction[0]} ${interaction[2]}-${interaction[3]} ${interaction[1]}, INSERTing - line ${currLine + 1}`);
+        console.log(`Interaction ${interaction[0]} ${interaction[2]} ${interaction[1]} NOT FOUND, INSERTing - line ${currLine}`);
         var inserted =  knex('interactions').insert({
           entity_1 : interaction[0],
           entity_2 : interaction[1],
           interaction_type_id : getItrnIdx(interaction[2]),
           pearson_correlation_coeff : null
         })
-        console.log("new INSERT RETURN")
         return inserted;
       }
       else {
-        console.log(`Interaction in Database: ${interaction[0]}-${interaction[3]} ${interaction[1]}, NOT INSERTing - line ${currLine + 1}`);
+        console.log(`Interaction ${interaction[0]} ${interaction[2]} ${interaction[1]} in Database: NOT INSERTing - line ${currLine}`, rows);
         return rows;
       }
     })
       //Insert into Mi table 
     .then(async(interactionReturn)=>{
+      console.log("Check THIS EXECUTES");
       const joinTablePreSelect = await knex('interactions_source_mi_join_table').where({
         interaction_id : interactionReturn[0].interaction_id || interactionReturn,
         source_id : sourceId,
-        mi_detection_method : miDetectionMethod,
-        mi_detection_type : miDetectionType
+        mi_detection_method : interaction[4],
+        mi_detection_type : interaction[5],
+        mode_of_action : getModeOfAction(interaction[3]) 
       });
+      console.log(`INSERT initialization interactions_source_mi_join_table ${currLine}`);
       if (joinTablePreSelect.length === 0 ) {
-        console.log("inserting mi");
+        console.log(`Interactions-Source Mi not in database: INSERTing - line ${currLine}`);
         return knex('interactions_source_mi_join_table').insert({
           interaction_id : interactionReturn[0].interaction_id || interactionReturn,
           source_id : sourceId,
           external_db_id : "",
-          mi_detection_method : miDetectionMethod,
-          mi_detection_type : miDetectionType,
-          mode_of_action : 1 //Just put 1 because it wasn't accepting blank
+          mi_detection_method : interaction[4],
+          mi_detection_type : interaction[5],
+          mode_of_action : getModeOfAction(interaction[3]) //Just put 1 because it wasn't accepting blank
         });
       }
       else {
-        console.log("did not add mi, already in db");
+        console.log(`Interactions-Source Mi in database: NOT INSERTing - line ${currLine}`, joinTablePreSelect);
+        //return interactionReturn;
       }
-    currLine = currLine + 1 
     })
     .catch((err)=>{
       console.error('Error:', err);
       throw new Error('STOP!');
     })    
   }
+  console.log("FINISHED")
 }
+
+/* QUESTIONS
+1. MI INSERT 
+  mode_of_action : 1 //Just put 1 because it wasn't accepting blank or default 
+2. WHERE MI TYPE, DECTECTIONS
+3. WHAT |401|432 ETC. 
+*/
 
 /*CONTROLLER EXECUTION */
 insert()
 .finally(() => {knex.destroy();})
 
-// INITIAL TESTING 
-//readHeader()
-//console.log(readHeader()); 
-//[ 'PMID', 'tags, more tags', '1', 'miDectionMethod', 'miDetectionType', 'Comments, these are fun comments!', 'Author', 'Title of Paper', 'Journal', 71 ]
 
-//nextInteractin and parseInteractionType
-//console.log(nextInteraction(currLine)) //[ 'AT2G30530', 'AT4G33430', '2', 'a' ]
+
+// INITIAL TESTING 
+// READ HEADER TEST 1
+//=console.log(readHeader())
+/*[ '21245844', 
+'Y1H|Y2H|Root Stele|qPCR|ChIP|OBP2|REV',
+'Brady et al.(MOL SYST BIOL, 2011) Root Stele Network',
+'Root stele gene network initially mapped with Y1H and Y2H on highly-enriched TFs (based on root spatiotemporal map) and miRNA-of-interest promoters. In planta confirmation and regulation determnined via
+ChIP and qPCR. - Vincent' ]
+*/
+
+// NEXT INTERACTION TEST 
+//
+//console.log(nextInteraction(currLine)) //[ 'AT2G44940', 'AT5G60200', 'pdi', null ]
 
 // getItrnIdx (AIVIndex) 
 //console.log("GET INDEX", getItrnIdx("ppi"), getItrnIdx("pdi")) //GET INDEX 1 2
@@ -238,4 +272,5 @@ https://github.com/VinLau/BAR-interactions-database
 http://zetcode.com/javascript/jest/
 https://stackoverflow.com/questions/18724378/check-if-a-line-only-contain-whitespace-and-n-in-js-node-js
 https://stackoverflow.com/questions/41080543/how-to-use-knex-with-async-await
+https://github.com/sheerun/knex-migrate //migrate
 */
