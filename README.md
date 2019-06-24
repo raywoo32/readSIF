@@ -5,7 +5,7 @@ A simple Node JS to load an exisiting database with a .sif file.
 [here](https://github.com/VinLau/BAR-interactions-database) and in test_dump.sql
 * .sif definition can be seen in sifDefinition.sif 
 
-Note:: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded 
+Note: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded 
 
 ## Getting Started
 
@@ -39,6 +39,10 @@ npm jest -g
 1. Complete 1-4 in "Getting Started"
 2. load test_dump.sql in mysql2
 3. `npm run test`in project directory
+
+Post Test cleanup:
+1. Execute schema.sql to clear db
+2. Execute test_dump.sql to reset for testing 
 
 ## Versioning
 
