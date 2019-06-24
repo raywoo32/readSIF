@@ -1,20 +1,20 @@
 # readSIF
 
-A simple Node JS to load an exisiting database with a .sif file.
+Use Node JS to load an exisiting database with information from a .sif file.
 * Database definition can be seen 
 [here](https://github.com/VinLau/BAR-interactions-database) and in schema.sql
-* .sif definition can be seen in sifDefinition.sif 
+* proper .sif can be seen in ./test/example.sif or ./test/notGRN.sif 
 
-Note: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded 
+Note: If one item in the .sif file cannot be uploaded, no item from the .sif will be uploaded. See rollback.sif examples. 
 
 ## Getting Started
 
 1. Install prerequisites
 2. Save Project folder
-3. Load database by executing schema.sql (WARNING: LOADS OVER EXISTING DB)
-3. Change ./dbConfig.js to db and server specifications 
-4. Add YOURSIF.sif to Project folder
-5. Execute one of the following commands
+3. Change ./dbConfig.js to db and server specifications
+4. Load database by executing ./makeDB/schema.sql if not already loaded (WARNING: LOADS OVER EXISTING DB) 
+5. Add YOURSIF.sif to Project folder
+6. Execute one of the following commands
 
 For uploading a GRN 
 ```
@@ -37,11 +37,11 @@ npm jest -g
 ## Running the tests
 
 1. Complete 1-4 in "Getting Started"
-2. load test_dump.sql in mysql2
+2. load ./test/test_dump.sql into db
 3. `npm run test`in project directory
 
 Post Test cleanup:
-1. Execute schema.sql to clear db
+1. Execute ./makeDB/schema.sql to clear db OR
 2. Execute test_dump.sql to reset for testing 
 
 ## Versioning
@@ -50,7 +50,7 @@ Post Test cleanup:
 
 ## Acknowledgments
 
-* Based on Vincent Lau's [insertIntoTables.js](https://github.com/VinLau/BAR-interactions-database)
+* Addition to Vincent Lau's [BAR-interactions-database](https://github.com/VinLau/BAR-interactions-database)
 * See Citations and Resources 
 
 ## Citations and Resources
