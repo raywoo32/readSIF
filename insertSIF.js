@@ -147,6 +147,11 @@ knex.transaction(async function(trx) {
 
   //Start Looping throught Insertion into Interaction and Mi
   while (currLine <= totalLine) {
+  if (sifByLine[currLine] == "") {
+    currLine = currLine + 1;
+    console.log(`Blank line on ${currLine}`)
+    continue;
+  }
   var interaction = nextInteraction();
   currLine = currLine + 1 
   await knex('interactions').select('*').where({
