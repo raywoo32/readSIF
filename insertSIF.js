@@ -11,6 +11,7 @@ PRECONDITION:
 // PART 1: Imports and Load Knex
 var fs = require('fs');
 const knex = require('./dbConfig.js');
+var dictionary = require('./dictionary.js');
 
 // PART 1.1: READ AND GLOBAL VARS 
 const arg = process.argv.slice(2);
@@ -92,24 +93,6 @@ function nextInteraction() {
   }
 }
 
-function getItrnIdx (AIVIndex) {
-  return {
-  'ppi' : 1,
-  'pdi' : 2,
-  'mmi' : 3
-  }[AIVIndex]
-}
-
-function getModeOfAction (moa) {
-  return {
-  'a' : 2,
-  'r' : 3,
-  null : 1
-  }[moa]
-}
-
-
-
 // PART 3: SCRIPT EXECUTION 
 knex.transaction(async function(trx) {
   // insert into external_source 
@@ -157,7 +140,7 @@ knex.transaction(async function(trx) {
   await knex('interactions').select('*').where({
     entity_1 : interaction[0],
     entity_2 : interaction[1],
-    interaction_type_id : getItrnIdx(interaction[2])
+    interaction_type_id : dictionary.getItrnIdx(interaction[2])
   })
     .then(  (rows)=>{
       console.log(`INSERT interactions ${currLine}`);
@@ -166,7 +149,7 @@ knex.transaction(async function(trx) {
         var inserted =  trx('interactions').insert({
           entity_1 : interaction[0],
           entity_2 : interaction[1],
-          interaction_type_id : getItrnIdx(interaction[2]),
+          interaction_type_id : dictionary.getItrnIdx(interaction[2]),
           pearson_correlation_coeff : null
         })
         return inserted;
@@ -183,7 +166,7 @@ knex.transaction(async function(trx) {
         source_id : sourceId,
         mi_detection_method : interaction[4],
         mi_detection_type : interaction[5],
-        mode_of_action : getModeOfAction(interaction[3]) 
+        mode_of_action : dictionary.getModeOfAction(interaction[3]) 
       });
       console.log(`INSERT initialization interactions_source_mi_join_table ${currLine}`);
       if (joinTablePreSelect.length === 0 ) {
@@ -194,7 +177,7 @@ knex.transaction(async function(trx) {
           external_db_id : "",
           mi_detection_method : interaction[4],
           mi_detection_type : interaction[5],
-          mode_of_action : getModeOfAction(interaction[3]) 
+          mode_of_action : dictionary.getModeOfAction(interaction[3]) 
         });
       }
       else {
