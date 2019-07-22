@@ -11,19 +11,19 @@ Note: If one item in the .sif file cannot be uploaded, no item from the .sif wil
 
 1. Install prerequisites
 2. Save Project folder
-3. Change ./dbConfig.js to db and server specifications
+3. Change ./dbConfig.js to db and server specifications make "/DATA/GRN_Images/" directory 
 4. Load database by executing ./makeDB/schema.sql if not already loaded (WARNING: LOADS OVER EXISTING DB) 
 5. Add YOURSIF.sif to Project folder
 6. Execute one of the following commands
 
 For uploading a GRN 
 ```
-node readSIF.js <YOURSIF.sif>
+node readSIF.js <YOURSIF.sif> <IMAGE>
 ```
 
 For uploading not a GRN
 ```
-node readSIF.js <YOURSIF.sif> -n
+node readSIF.js <YOURSIF.sif> <IMAGE> -n
 ```
 
 ### Prerequisites
@@ -33,6 +33,7 @@ node readSIF.js <YOURSIF.sif> -n
 3. knex
 4. mysql
 5. shelljs (only needed for test suite) 
+6. inquirer
 
 ## Running the tests
 
