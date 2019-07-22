@@ -80,4 +80,4 @@ Frameworks for Modern Web Dev, by Tim Ambler and Nicholas Cloud,
 [list items in directory] (https://code-maven.com/list-content-of-directory-with-nodejs)
 * inquirer 
 [how to test] (https://stackoverflow.com/questions/49862039/how-to-write-unit-tests-for-inquirer-js)
-
+* image copying [1](https://flaviocopes.com/node-input-from-cli/) [2](https://stackoverflow.com/questions/5212293/how-to-copy-a-image)[3](https://stackoverflow.com/questions/13786160/copy-folder-recursively-in-node-js)
