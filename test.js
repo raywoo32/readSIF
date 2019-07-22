@@ -9,6 +9,7 @@ PRECONDITION:
 2. dbConfig.js reffers to db with interactions-vincent
 3. interactions-vincent has interaction_lookup_table loaded
 4. test_dump.sql has been run 
+5. "/DATA/GRN_Images/" directory exists
 */
 
 
@@ -16,7 +17,6 @@ PRECONDITION:
 var fs = require('fs');
 const knex = require('./dbConfig.js');
 const shell = require('shelljs');
-
 
 // 2. TEST INITIAL STATE OF DATABASE FROM DUMP, VALUES FROM verifications.test.js
 //external_source
@@ -49,7 +49,7 @@ describe("mi precondition", function(){
 //external_source
 describe("external_source example.sif", function(){
   it("sources", async () => {
-    shell.exec('node insertSIF.js ./test/example.sif -n');
+    shell.exec('node insertSIF.js ./test/example.sif ./test/test.jpg');
     const testSourceCount = await knex('external_source').count('*');
     const realSourceCount = 1; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
@@ -77,7 +77,7 @@ describe("mi example.sif", function(){
 //external_source
 describe("external_source notGRN.sif", function(){
   it("sources", async () => {
-    shell.exec('node insertSIF.js ./test/notGRN.sif -f');
+    shell.exec('node insertSIF.js ./test/notGRN.sif ./test/test.jpg -f');
     const testSourceCount = await knex('external_source').count('*');
     const realSourceCount = 2; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
@@ -104,7 +104,7 @@ describe("mi notGRN.sif", function(){
 //external_source
 describe("external_source rollback.sif", function(){
   it("sources", async () => {
-    shell.exec('node insertSIF.js ./test/rollback.sif');
+    shell.exec('node insertSIF.js ./test/rollback.sif ./test/rollback.jpg');
     const testSourceCount = await knex('external_source').count('*');
     const realSourceCount = 2; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
@@ -127,9 +127,22 @@ describe("mi rollback.sif", function(){
   })
 });
 
+
+// check images uploaded to directory 
+describe("image directory", function(){
+  it("images", async ()=>{
+    fs.readdir("/DATA/GRN_Images/", function(err, items) {
+    expect(items.toEqual([ 'test.jpg' ]));
+    })
+  })
+});
+
 // 6. CLEAN UP 
 afterAll(async () => {
   await knex.destroy();
 });
 
-
+/* NOTE test inquirer manually with:
+node insertSIF.js ./test/version.sif ./test/rollback.jpg
+  and say yes or no (inquirer does not work with jest)
+ */
