@@ -76,3 +76,8 @@ Post Test cleanup:
 * JavaScript General
 Frameworks for Modern Web Dev, by Tim Ambler and Nicholas Cloud,
 [promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then)
+* fs
+[list items in directory] (https://code-maven.com/list-content-of-directory-with-nodejs)
+* inquirer 
+[how to test] (https://stackoverflow.com/questions/49862039/how-to-write-unit-tests-for-inquirer-js)
+
