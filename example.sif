@@ -1,0 +1,8 @@
+#grn_title:Brady et al.(MOL SYST BIOL, 2011) Root Stele Network
+#source_name:21245846
+#comments:Root stele gene network initially mapped with Y1H and Y2H on highly-enriched TFs (based on root spatiotemporal map) and miRNA-of-interest promoters. In planta confirmation and regulation determnined via ChIP and qPCR. - Vincent
+#tags:Y1H|Y2H|Root Stele|qPCR|ChIP|OBP2|REV
+---
+AT2G44940 pdi AT5G60200|407|432
+AT3G60490 pdi AT5G60200|407|432
+AT3G00000 pdi-r AT5G00000|407|432

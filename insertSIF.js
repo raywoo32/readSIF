@@ -6,6 +6,7 @@ PRECONDITION:
 1. options var correct 
 2. knex reffers to db with interactions-vincent
 3. interactions-vincent has interaction_lookup_table loaded
+4. "/DATA/GRN_Images/" directory exists
 */
 
 // PART 1: Imports and Load Knex
@@ -99,12 +100,12 @@ function nextInteraction() {
 }
 
 // 2.1 : INQUIRER FOR PAPER UPLOAD
-function askVersion() {
+function askVersion(numEntries) {
   const questions = [
     {
       name: 'toDisplay',
       type: 'confirm', //y n
-      message: 'A previous version of this paper has been uploaded. Do you want to continue?',
+      message: `${numEntries} version(s) of this paper have already been uploaded. Do you want to continue?`,
       validate: function( value ) {
           if (value == "n") {
             console.log("no") //TODO
@@ -138,46 +139,84 @@ knex.transaction(async function(trx) {
   var header = readHeader()
   split = header[0].split("#");
   pmidOnly = split[0];
-  isVersion = true; 
-  if (split.length === 1){
-    isVersion = false;
-  }
-  if (isVersion == true) {
-    const y_n = await askVersion();
-    if (y_n.toDisplay == false){
-      console.log("exiting...");
-      process.exit();
-    }
-  }
-  var sourceId; //so can be used outside of .then()
-  const getSourceID = await knex('external_source').select('*').where({
-    source_name : header[0]
+
+  // How many versions are there 
+  var numEntries = null; //null when no previous versions 
+  var newPmidToEnter; //the pmid with the #version number if needed 
+  const entryNotVersioned = await knex('external_source').select('*').where({  //look for has one entry not versioned 
+    source_name : pmidOnly
   })
-    .then(  (external_source)=>{
-      console.log('INSERT initialization external_source');
-      if (external_source.length === 0 ){
-        console.log(`PMID not found {$sourceName}}, INSERTing into external_source`);
-        var insertSource = trx('external_source').insert({
-          source_name : header[0],
-          comments : header[3],
-          date_uploaded : new Date(),
-          url : 'www.ncbi.nlm.nih.gov/pubmed/' + pmidOnly, 
-          grn_title : header[2],
-          tags : header[1],
-          image_url : "https://bar.utoronto.ca/GRN_Images/" + imageName
+    .then( (has1Entry) =>{
+      if (has1Entry[0] != null) {
+        console.log('Paper with same pmid has been entered once:', has1Entry); //could be versioned or not have an entry
+        numEntries = 2;
+        newPmidToEnter = pmidOnly + "#2" 
+      }
+    })
+    if (numEntries != 2 ) { //could have no entry or many versions 
+      const atLeast2Versioned = await knex('external_source').select('*').where({ // if exists already has at least 2 entries, is versioned 
+        source_name : pmidOnly + "#1"
+      })
+        .then( (isVersionedIfExists) => {
+          if (isVersionedIfExists[0] != null) {
+            numEntries = 3; // Continue in loop below 
+          }
+          else {
+            newPmidToEnter = pmidOnly;
+          }
         })
-        .then(  (insertedSource)=>{
-          console.log(insertedSource)
-          console.log(insertedSource[0]);
-          sourceId = insertedSource[0];
-          return insertedSource;
-        })
+    }
+
+  // Check how many versions there are if there is already versioning 
+  console.log("num entries", numEntries)
+  if (numEntries == 3) { // is 2 for now by definition, search for a higher entry number now 
+    versionExists = true;
+    while (versionExists == true) {
+      const checkExists = await knex('external_source').select('*').where({ // if exists already has at least 2 entries, is versioned 
+        source_name : header[0] + "#" + numEntries
+      })
+      .then( (checkVersion) => {
+        if (checkVersion[0] == null) {
+          versionExists = false;
+        }
+        else {
+          numEntries = numEntries + 1;
+        }
+      })
+    }
+    newPmidToEnter = pmidOnly + "#" + numEntries
+  }
+
+  // Perform action based on number of versions, 0 already done 
+  if (numEntries >= 2 ) { //one entry not versioned 
+      //ask if you want to add the second version 
+      console.log("ask version")
+      const y_n = await askVersion(numEntries - 1);
+      if (y_n.toDisplay == false){
+        console.log("exiting...");
+        process.exit();
       }
       else {
-        console.log(`Paper with PMID:${header[0]} in Database: not inserting`, external_source);
-        sourceId = external_source[0].source_id
-        return external_source;
+        if ( numEntries == 2 ) { //Updates old version of the unversioned to denote versioning when only 1 entry 
+          const versionExisting = await knex('external_source').where({ source_name: pmidOnly }).update({ source_name: pmidOnly +'#1' });
+          newPmidToEnter = pmidOnly + "#2";
+        }
       }
+  }
+  // Do external_source insert 
+  console.log('INSERT initialization external_source');
+  var sourceId;
+  var insertSource = await trx('external_source').insert({
+    source_name : newPmidToEnter,
+    comments : header[3],
+    date_uploaded : new Date(),
+    url : 'www.ncbi.nlm.nih.gov/pubmed/' + pmidOnly, 
+    grn_title : header[2],
+    tags : header[1],
+    image_url : "https://bar.utoronto.ca/GRN_Images/" + imageName
+  })
+  .then( (checkInserted) => {
+    sourceId = checkInserted[0];
   })
 
   //Start Looping throught Insertion into Interaction and Mi
@@ -195,7 +234,7 @@ knex.transaction(async function(trx) {
     interaction_type_id : dictionary.getItrnIdx(interaction[2])
   })
     .then(  (rows)=>{
-      console.log(`INSERT interactions ${currLine}`);
+      console.log(`INSERT interactions on line ${currLine}`);
       if (rows.length === 0 ){
         console.log(`Interaction ${interaction[0]} ${interaction[2]} ${interaction[1]} NOT FOUND, INSERTing - line ${currLine}`);
         var inserted =  trx('interactions').insert({
@@ -220,7 +259,7 @@ knex.transaction(async function(trx) {
         mi_detection_type : interaction[5],
         mode_of_action : dictionary.getModeOfAction(interaction[3]) 
       });
-      console.log(`INSERT initialization interactions_source_mi_join_table ${currLine}`);
+      console.log(`INSERT initialization interactions_source_mi_join_table on line ${currLine}`);
       if (joinTablePreSelect.length === 0 ) {
         console.log(`Interactions-Source Mi not in database: INSERTing - line ${currLine}`);
         return trx('interactions_source_mi_join_table').insert({
@@ -270,4 +309,11 @@ TODO:
 
 Add dependencies, fs, inquirer, etc. 
 
+*/
+
+/*
+NOTE TO VINCET: 
+- checks for hash
+- uploads my number only 
+- need to check if there I should double mi, actually yes 
 */

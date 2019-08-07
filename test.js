@@ -51,7 +51,7 @@ describe("external_source example.sif", function(){
   it("sources", async () => {
     shell.exec('node insertSIF.js ./test/example.sif ./test/test.jpg');
     const testSourceCount = await knex('external_source').count('*');
-    const realSourceCount = 1; //From verifications.test.js
+    const realSourceCount = 2; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
   });
 });
@@ -67,7 +67,7 @@ describe("interaction example.sif", function(){
 describe("mi example.sif", function(){
   it("mi", async ()=>{
     const testMiCount = await knex('interactions_source_mi_join_table').count('*');
-    const realMiCount = 3;
+    const realMiCount = 4;
     expect(testMiCount[0]['count(*)']).toEqual(realMiCount);
   })
 });
@@ -79,7 +79,7 @@ describe("external_source notGRN.sif", function(){
   it("sources", async () => {
     shell.exec('node insertSIF.js ./test/notGRN.sif ./test/test.jpg -f');
     const testSourceCount = await knex('external_source').count('*');
-    const realSourceCount = 2; //From verifications.test.js
+    const realSourceCount = 3; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
   });
 });
@@ -95,7 +95,7 @@ describe("interaction notGRN.sif", function(){
 describe("mi notGRN.sif", function(){
   it("mi", async ()=>{
     const testMiCount = await knex('interactions_source_mi_join_table').count('*');
-    const realMiCount = 4;
+    const realMiCount = 5;
     expect(testMiCount[0]['count(*)']).toEqual(realMiCount);
   })
 });
@@ -106,7 +106,7 @@ describe("external_source rollback.sif", function(){
   it("sources", async () => {
     shell.exec('node insertSIF.js ./test/rollback.sif ./test/rollback.jpg');
     const testSourceCount = await knex('external_source').count('*');
-    const realSourceCount = 2; //From verifications.test.js
+    const realSourceCount = 3; //From verifications.test.js
     expect(testSourceCount[0]['count(*)']).toEqual(realSourceCount); 
   });
 });
@@ -122,7 +122,7 @@ describe("interaction rollback.sif", function(){
 describe("mi rollback.sif", function(){
   it("mi", async ()=>{
     const testMiCount = await knex('interactions_source_mi_join_table').count('*');
-    const realMiCount = 4;
+    const realMiCount = 5;
     expect(testMiCount[0]['count(*)']).toEqual(realMiCount);
   })
 });
@@ -142,7 +142,15 @@ afterAll(async () => {
   await knex.destroy();
 });
 
-/* NOTE test inquirer manually with:
-node insertSIF.js ./test/version.sif ./test/rollback.jpg
-  and say yes or no (inquirer does not work with jest)
+/* NOTE test inquirer and continued upload by running manually with:
+node insertSIF.js ./test/example.sif ./test/rollback.jpg
+- external is 4
+- interactions is 4
+- mi is 8
+
+node insertSIF.js ./test/example.sif ./test/rollback.jpg
+- external is 5
+- interactions is 4
+- mi is 11
+
  */
