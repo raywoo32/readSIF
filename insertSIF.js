@@ -119,6 +119,22 @@ function askVersion(numEntries) {
   return inquirer.prompt(questions);
 }
 
+//2.2 : INQUIRER ASK WHAT TYPE OF TAGS
+function askTags(tag) {
+  const questions = [
+    {
+      name: 'tagType',
+      type: 'list', //multiple choice 
+      message: `What is ${tag}?`,
+      choices: ["Gene", "Experiment", "Condition", "Misc"],
+      validate: function( value ) {
+      }
+    }
+  ];
+  return inquirer.prompt(questions);
+}
+
+
 
 // PART 2.2: LOAD IMAGE TO CORRECT DIRECTORY
 // Modified from: https://stackoverflow.com/questions/5212293/how-to-copy-a-image
@@ -219,6 +235,37 @@ knex.transaction(async function(trx) {
     sourceId = checkInserted[0];
   })
 
+  //Handle tags
+  var tagsList = header[1].split("|");
+  for (tag of tagsList) {
+    //Check if inserted into new sql category
+    var type = await askTags(tag);
+    console.log(`Linking source and tag`)
+    console.log(tag, sourceId)
+    const doesTagExist = await knex('tag_lookup_table').select('*').where({ // TAG Is the key. Ask after. 
+      'tag_name' : tag
+    })
+    .then(  (rows)=>{
+      console.log(`INSERT tag ${tag}, ${type.tagType}`);
+      if (rows.length === 0 ){
+        console.log(`Tag NOT FOUND, creating ${tag}, ${type.tagType}`);
+        var inserted =  trx('tag_lookup_table').insert({
+          'tag_name' : tag,
+          'tag_group' : type.tagType
+        })
+        return inserted;
+      }
+      else {
+        console.log(`Tag ${tag} in Database: NOT INSERTing into tag_lookup_table`);
+        return rows;
+      }
+    })
+    var insertTagSource =  await trx('source_tag_join_table').insert({
+      'tag_name' : tag,
+      'source_id' : sourceId
+    })
+  }
+
   //Start Looping throught Insertion into Interaction and Mi
   while (currLine <= totalLine) {
   if (sifByLine[currLine] == "") {
@@ -288,7 +335,6 @@ knex.transaction(async function(trx) {
 
 /* CLEAN UP */
 .finally(() => {knex.destroy();})
-
 
 // Initil Junk code
 
