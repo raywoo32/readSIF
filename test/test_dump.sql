@@ -24,7 +24,8 @@ DROP TABLE IF EXISTS `interactions`;
 DROP TABLE IF EXISTS `interactions_algo_score_join_table`;
 DROP TABLE IF EXISTS `interolog_confidence_subset_table`;
 DROP TABLE IF EXISTS `interactions_source_mi_join_table`;
-
+DROP TABLE IF EXISTS `source_tag_join_table`;
+DROP TABLE IF EXISTS `tag_lookup_table`;
 
 -- algorithms_lookup_table
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -58,7 +59,7 @@ CREATE TABLE `external_source` (
   `grn_title` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`source_id`),
   UNIQUE KEY `source_name_UNIQUE` (`source_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `external_source` WRITE;
@@ -211,6 +212,33 @@ UNLOCK TABLES;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+CREATE TABLE IF NOT EXISTS `interactions_vincent`.`tag_lookup_table` (
+  `tag_name` VARCHAR(20) NOT NULL,
+  `tag_group` ENUM("Gene", "Experiment", "Condition", "Misc") NOT NULL,
+  PRIMARY KEY (`tag_name`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `interactions_vincent`.`source_tag_join_table`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `interactions_vincent`.`source_tag_join_table` (
+  `source_id` INT(12) NOT NULL,
+  `tag_name` VARCHAR(20) NOT NULL,
+  PRIMARY KEY (`source_id`, `tag_name`),
+  INDEX `tag_join_tag_names_FK_idx` (`tag_name` ASC),
+  CONSTRAINT `tag_join_source_id_FK`
+    FOREIGN KEY (`source_id`)
+    REFERENCES `interactions_vincent`.`external_source` (`source_id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `tag_join_tag_names_FK`
+    FOREIGN KEY (`tag_name`)
+    REFERENCES `interactions_vincent`.`tag_lookup_table` (`tag_name`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
 
 -- TESTING AID
 -- SELECT * FROM interactions; 
