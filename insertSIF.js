@@ -20,10 +20,10 @@ const arg = process.argv.slice(2);
 var sif = fs.readFileSync(arg[0].toString()); 
 var sifByLine = sif.toString().split("\n");
 //image 
-var imagePath = arg[1];
+var imagePath = arg[1].toString();
 var imageSplit = imagePath.toString().split("/"); //ONLY ACCEPTS "/" as separator, not Windows filepath
 var imageName;
-if (imagePath = "na") {
+if (imagePath == "na") {
   var imageName =  "test.png"; //THIS IS IMAGE DEFAULT
 }
 else{
