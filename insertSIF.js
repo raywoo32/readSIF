@@ -22,7 +22,13 @@ var sifByLine = sif.toString().split("\n");
 //image 
 var imagePath = arg[1];
 var imageSplit = imagePath.toString().split("/"); //ONLY ACCEPTS "/" as separator, not Windows filepath
-var imageName = imageSplit[imageSplit.length - 1];
+var imageName;
+if (imagePath = "na") {
+  var imageName =  "test.png"; //THIS IS IMAGE DEFAULT
+}
+else{
+  var imageName = imageSplit[imageSplit.length - 1];
+}
 
 //flags
 var flag = arg[2];
@@ -45,6 +51,7 @@ function readHeader() {
     const tags = sifByLine[3].replace('#tags:', '').trim();
     const comments = sifByLine[2].replace('#comments:', '').trim(); //any type in one line 
     if (isGRN == false) { grnTitle = null; }
+    console.log("tags", tags)
     return([sourceName, tags, grnTitle, comments])
     //      0            1      2      3            
 }
@@ -120,18 +127,19 @@ function askVersion(numEntries) {
 }
 
 //2.2 : INQUIRER ASK WHAT TYPE OF TAGS
-function askTags(tag) {
-  const questions = [
-    {
-      name: 'tagType',
-      type: 'list', //multiple choice 
-      message: `What is ${tag}?`,
-      choices: ["Gene", "Experiment", "Condition", "Misc"],
-      validate: function( value ) {
-      }
-    }
-  ];
-  return inquirer.prompt(questions);
+function parseTags(tag) {
+  console.log("TAG", tag)
+  var choices = ["GENE", "EXPERIMENT", "CONDITION", "MISC"]
+  var tagName = tag.split(":")[0];
+  var category = tag.split(":")[1];
+  console.log("TAGNAME", tagName)
+  console.log("CATEGORY", category)
+  if (choices.includes(category.toUpperCase()) === true) {
+    return [tagName, category];
+  }
+  else {
+    throw "Incorrect tag type found";
+  }
 }
 
 
@@ -228,7 +236,6 @@ knex.transaction(async function(trx) {
     date_uploaded : new Date(),
     url : 'www.ncbi.nlm.nih.gov/pubmed/' + pmidOnly, 
     grn_title : header[2],
-    tags : header[1],
     image_url : "https://bar.utoronto.ca/GRN_Images/" + imageName
   })
   .then( (checkInserted) => {
@@ -236,32 +243,36 @@ knex.transaction(async function(trx) {
   })
 
   //Handle tags
+  console.log("HEADER", header[1])
   var tagsList = header[1].split("|");
+  console.log("tagsList", tagsList)
   for (tag of tagsList) {
     //Check if inserted into new sql category
-    var type = await askTags(tag);
+    var parsed = await parseTags(tag);
+    tagName = parsed[0];
+    tagType = parsed[1];
     console.log(`Linking source and tag`)
-    console.log(tag, sourceId)
+    console.log(tagName, sourceId)
     const doesTagExist = await knex('tag_lookup_table').select('*').where({ // TAG Is the key. Ask after. 
-      'tag_name' : tag
+      'tag_name' : tagName
     })
     .then(  (rows)=>{
-      console.log(`INSERT tag ${tag}, ${type.tagType}`);
+      console.log(`INSERT tag ${tagName}, ${tagType}`);
       if (rows.length === 0 ){
-        console.log(`Tag NOT FOUND, creating ${tag}, ${type.tagType}`);
+        console.log(`Tag NOT FOUND, creating ${tagName}, ${tagType}`);
         var inserted =  trx('tag_lookup_table').insert({
-          'tag_name' : tag,
-          'tag_group' : type.tagType
+          'tag_name' : tagName,
+          'tag_group' : tagType
         })
         return inserted;
       }
       else {
-        console.log(`Tag ${tag} in Database: NOT INSERTing into tag_lookup_table`);
+        console.log(`Tag ${tagName} in Database: NOT INSERTing into tag_lookup_table`);
         return rows;
       }
     })
     var insertTagSource =  await trx('source_tag_join_table').insert({
-      'tag_name' : tag,
+      'tag_name' : tagName,
       'source_id' : sourceId
     })
   }
@@ -275,6 +286,7 @@ knex.transaction(async function(trx) {
   }
   var interaction = nextInteraction();
   currLine = currLine + 1 
+  console.log("INTERACTION", interaction)
   await knex('interactions').select('*').where({
     entity_1 : interaction[0],
     entity_2 : interaction[1],
@@ -299,6 +311,8 @@ knex.transaction(async function(trx) {
     })
       //Insert into Mi table 
     .then(async(interactionReturn)=>{
+      console.log(interaction[4])
+      console.log("TYPE", interaction[5])
       const joinTablePreSelect = await knex('interactions_source_mi_join_table').where({
         interaction_id : interactionReturn[0].interaction_id || interactionReturn,
         source_id : sourceId,
@@ -325,7 +339,9 @@ knex.transaction(async function(trx) {
   }
 })
 .then(function(inserts) {
-  copyImage();
+  if (imagePath != "na") {
+    copyImage();
+  }
   console.log("Sif file uploaded to database");
 })
 .catch(function(error) {
@@ -359,7 +375,17 @@ Add dependencies, fs, inquirer, etc.
 
 /*
 NOTE TO VINCET: 
-- checks for hash
-- uploads my number only 
-- need to check if there I should double mi, actually yes 
+- CHANGE READ SIF TO BE CASE INSENSITIVE, not all upper, just accept if it is the same lettering
+- drop tags from external_source
+
+TODO:
+- CROP IMAGES, 
+- fix comments and 
+- set default url to cat image maybe 
+-  REMOVE .1  306 
+- APPEND CATEFORY TO TAGS in script 
+
+- WRITE AS TAG:EXPERIMENT, condition ect. 
+
+
 */
