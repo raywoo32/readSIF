@@ -35,6 +35,10 @@ node readSIF.js <YOURSIF.sif> <IMAGE> -n
 5. shelljs (only needed for test suite) 
 6. inquirer
 
+## Overview
+An overview of the package is illustrated below. 
+![](./inst/extdata/ModCluster.jpg)
+
 ## Running the tests
 
 1. Complete 1-4 in "Getting Started"
